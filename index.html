@@ -254,7 +254,10 @@ window.renderTable = function () {
                 <td>
                     <span contenteditable="true" onblur="saveCategory('${item.id}', this.innerText)">${item.category}</span>
                 </td>
-                <td>${item.qty}</td>
+                <td>
+                <span id="qty-${item.id}">${item.qty}</span>
+                <button class="edit-btn" onclick="startEditQty('${item.id}',${item.qty})">✏️</button>
+                </td>
                 <td>
                     <button class="plus" onclick='changeQty(${JSON.stringify(item)}, 1)'>+</button>
                     <button class="minus" onclick='changeQty(${JSON.stringify(item)}, -1)'>-</button>
