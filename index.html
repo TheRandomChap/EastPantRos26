@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roskilde 2026 Kasser</title>
+
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #eef2f7, #dfe9f3);
+    }
+
+    .container {
+        max-width: 950px;
+        margin: 40px auto;
+        background: rgba(255,255,255,0.9);
+        padding: 25px;
+        border-radius: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        backdrop-filter: blur(8px);
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 32px;
+        color: #222;
+    }
+
+    input, button {
+        padding: 12px 14px;
+        margin: 6px;
+        border-radius: 14px;
+        border: 1px solid #ddd;
+        outline: none;
+        font-size: 14px;
+        transition: 0.2s;
+    }
+
+    input:focus {
+        border-color: #6c63ff;
+        box-shadow: 0 0 0 3px rgba(108,99,255,0.2);
+    }
+
+    button {
+        cursor: pointer;
+        border: none;
+        font-weight: 600;
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-top: 20px;
+        overflow: hidden;
+        border-radius: 18px;
+    }
+
+    th, td {
+        padding: 14px;
+        text-align: left;
+    }
+
+    th {
+        background: #6c63ff;
+        color: white;
+        font-weight: 600;
+    }
+
+    tr {
+        background: white;
+    }
+
+    tr:nth-child(even) {
+        background: #f7f7ff;
+    }
+
+    tr:hover {
+        background: #eef0ff;
+    }
+
+    td {
+        border-bottom: 1px solid #eee;
+    }
+
+    .delete {
+        background: #ff4d4d;
+        color: white;
+        border-radius: 12px;
+    }
+
+    .plus {
+        background: #2ecc71;
+        color: white;
+        border-radius: 12px;
+    }
+
+    .minus {
+        background: #f39c12;
+        color: white;
+        border-radius: 12px;
+    }
+
+    .export {
+        background: #333;
+        color: white;
+        border-radius: 14px;
+    }
+
+    .add-btn {
+        background: #6c63ff;
+        color: white;
+        border-radius: 14px;
+    }
+
+    .edit-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 6px;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Roskilde 2026 Kasser</h1>
+
+    <div class="controls">
+        <input type="text" id="itemName" placeholder="Ting">
+        <input type="number" id="itemQty" placeholder="Antal">
+        <input type="text" id="itemCategory" placeholder="Lokation">
+        <button class="add-btn" onclick="addItem()">Tilføj ting</button>
+        <button class="export" onclick="exportExcel()">Eksportér Excel</button>
+    </div>
+
+    <input type="text" id="search" placeholder="Find ting" oninput="renderTable()">
+
+    <table>
+        <thead>
+            <tr>
+                <th>Ting</th>
+                <th>Lokation</th>
+                <th>Antal</th>
+                <th>Handlinger</th>
+            </tr>
+        </thead>
+        <tbody id="inventoryTable"></tbody>
+    </table>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    deleteDoc,
+    doc,
+    updateDoc,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCl9DTQupgLcgJpR_VBNQoioj1eMtFv9tA",
+  authDomain: "roskildeinventar.firebaseapp.com",
+  projectId: "roskildeinventar",
+  storageBucket: "roskildeinventar.firebasestorage.app",
+  messagingSenderId: "537923363642",
+  appId: "1:537923363642:web:32b64dfa078f4e80b2e603"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const colRef = collection(db, "inventory");
+
+let inventory = [];
+
+onSnapshot(colRef, (snapshot) => {
+    inventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTable();
+});
+
+window.addItem = async function () {
+    const name = document.getElementById('itemName').value;
+    const qty = parseInt(document.getElementById('itemQty').value);
+    const category = document.getElementById('itemCategory').value;
+
+    if (!name || isNaN(qty)) return;
+
+    await addDoc(colRef, {
+        name,
+        qty,
+        category
+    });
+
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemQty').value = '';
+    document.getElementById('itemCategory').value = '';
+};
+
+window.deleteItem = async function (id) {
+    await deleteDoc(doc(db, "inventory", id));
+};
+
+window.changeQty = async function (item, amount) {
+    await updateDoc(doc(db, "inventory", item.id), {
+        qty: item.qty + amount
+    });
+};
+
+window.saveName = async function (id, value) {
+    await updateDoc(doc(db, "inventory", id), { name: value });
+};
+
+window.saveCategory = async function (id, value) {
+    await updateDoc(doc(db, "inventory", id), { category: value });
+};
+
+window.renderTable = function () {
+    const table = document.getElementById('inventoryTable');
+    const search = document.getElementById('search').value.toLowerCase();
+
+    table.innerHTML = '';
+
+    inventory
+    .filter(i =>
+        (i.name || "").toLowerCase().includes(search) ||
+        (i.category || "").toLowerCase().includes(search)
+    )
+    .forEach(item => {
+        table.innerHTML += `
+            <tr>
+                <td>
+                    <span contenteditable="true" onblur="saveName('${item.id}', this.innerText)">${item.name}</span>
+                </td>
+                <td>
+                    <span contenteditable="true" onblur="saveCategory('${item.id}', this.innerText)">${item.category}</span>
+                </td>
+                <td>${item.qty}</td>
+                <td>
+                    <button class="plus" onclick='changeQty(${JSON.stringify(item)}, 1)'>+</button>
+                    <button class="minus" onclick='changeQty(${JSON.stringify(item)}, -1)'>-</button>
+                    <button class="delete" onclick="deleteItem('${item.id}')">Slet</button>
+                </td>
+            </tr>
+        `;
+    });
+};
+
+window.exportExcel = function () {
+    const data = inventory.map(i => ({
+        Ting: i.name,
+        Lokation: i.category,
+        Antal: i.qty
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+
+    XLSX.writeFile(wb, "inventory.xlsx");
+};
+</script>
+
+</body>
+</html>
