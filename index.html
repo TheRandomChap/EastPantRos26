@@ -281,6 +281,31 @@ window.exportExcel = function () {
 
     XLSX.writeFile(wb, "inventory.xlsx");
 };
+    window.startEditQty = function(id, currentQty) {
+    const span = document.getElementById(`qty-${id}`);
+
+    span.innerHTML = `
+        <input
+            type="number"
+            id="qtyInput-${id}"
+            value="${currentQty}"
+            min="0"
+            onblur="saveQty('${id}')"
+            onkeydown="if(event.key==='Enter') saveQty('${id}')"
+            style="width:70px;border-radius:10px;padding:6px;"
+        >
+    `;
+
+    document.getElementById(`qtyInput-${id}`).focus();
+};
+
+window.saveQty = async function(id) {
+    const value = parseInt(document.getElementById(`qtyInput-${id}`).value);
+
+    await updateDoc(doc(db, "inventory", id), {
+        qty: isNaN(value) ? 0 : value
+    });
+};
 </script>
 
 </body>
