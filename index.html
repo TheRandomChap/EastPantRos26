@@ -74,6 +74,7 @@
     th, td {
         padding: 14px;
         text-align: left;
+        vertical-align: top;
     }
 
     th {
@@ -135,6 +136,127 @@
         font-size: 14px;
         margin-left: 6px;
     }
+
+    .item-cell {
+        width: 42%;
+        min-width: 240px;
+    }
+
+    .actions-cell {
+        min-width: 230px;
+    }
+
+    .comment-btn {
+        background: #3498db;
+        color: white;
+        border-radius: 12px;
+    }
+
+    .comments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+        max-width: 360px;
+    }
+
+    .saved-comment {
+        padding: 10px 12px;
+        background: #f0f7ff;
+        border: 1px solid #cfe8ff;
+        border-radius: 10px;
+        color: #2d3748;
+        font-size: 13px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .comment-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 5px;
+    }
+
+    .comment-author {
+        font-weight: 700;
+        color: #1f5f8f;
+    }
+
+    .comment-text {
+        margin: 0;
+        white-space: pre-wrap;
+    }
+
+    .remove-comment {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 5px 8px;
+        border-radius: 8px;
+        background: #ff4d4d;
+        color: white;
+        font-size: 12px;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 10;
+    }
+
+    .modal-overlay.open {
+        display: flex;
+    }
+
+    .comment-modal {
+        width: min(420px, 100%);
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 18px 45px rgba(0,0,0,0.22);
+        padding: 20px;
+    }
+
+    .comment-modal h2 {
+        margin: 0 0 12px;
+        color: #222;
+        font-size: 22px;
+    }
+
+    .comment-modal input,
+    .comment-modal textarea {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 8px 0;
+    }
+
+    .comment-modal textarea {
+        min-height: 120px;
+        resize: vertical;
+        font-family: Arial, sans-serif;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .cancel-btn {
+        background: #e9ecf2;
+        color: #333;
+    }
+
+    .save-btn {
+        background: #6c63ff;
+        color: white;
+    }
 </style>
 </head>
 <body>
@@ -146,8 +268,8 @@
         <input type="text" id="itemName" placeholder="Ting">
         <input type="number" id="itemQty" placeholder="Antal">
         <input type="text" id="itemCategory" placeholder="Lokation">
-        <button class="add-btn" onclick="addItem()">Tilføj ting</button>
-        <button class="export" onclick="exportExcel()">Eksportér Excel</button>
+        <button class="add-btn" onclick="addItem()">Tilf&oslash;j ting</button>
+        <button class="export" onclick="exportExcel()">Eksport&eacute;r Excel</button>
     </div>
 
     <input type="text" id="search" placeholder="Find ting" oninput="renderTable()">
@@ -163,6 +285,18 @@
         </thead>
         <tbody id="inventoryTable"></tbody>
     </table>
+</div>
+
+<div class="modal-overlay" id="commentModal">
+    <div class="comment-modal">
+        <h2>Kommentar</h2>
+        <input type="text" id="commentName" placeholder="Dit navn">
+        <textarea id="commentText" placeholder="Skriv kommentar"></textarea>
+        <div class="modal-actions">
+            <button class="cancel-btn" onclick="closeCommentPopup()">Annuller</button>
+            <button class="save-btn" onclick="saveCommentPopup()">Gem</button>
+        </div>
+    </div>
 </div>
 
 <!-- FIREBASE -->
@@ -192,6 +326,7 @@ const db = getFirestore(app);
 const colRef = collection(db, "inventory");
 
 let inventory = [];
+let activeCommentItemId = null;
 
 onSnapshot(colRef, (snapshot) => {
     inventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -208,7 +343,8 @@ window.addItem = async function () {
     await addDoc(colRef, {
         name,
         qty,
-        category
+        category,
+        comments: []
     });
 
     document.getElementById('itemName').value = '';
@@ -220,9 +356,9 @@ window.deleteItem = async function (id) {
     await deleteDoc(doc(db, "inventory", id));
 };
 
-window.changeQty = async function (item, amount) {
-    await updateDoc(doc(db, "inventory", item.id), {
-        qty: item.qty + amount
+window.changeQty = async function (id, currentQty, amount) {
+    await updateDoc(doc(db, "inventory", id), {
+        qty: currentQty + amount
     });
 };
 
@@ -234,6 +370,100 @@ window.saveCategory = async function (id, value) {
     await updateDoc(doc(db, "inventory", id), { category: value });
 };
 
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function getItemComments(item) {
+    if (Array.isArray(item.comments)) {
+        return item.comments;
+    }
+
+    if (item.commentName || item.comment) {
+        return [{
+            name: item.commentName || "",
+            text: item.comment || "",
+            createdAt: ""
+        }];
+    }
+
+    return [];
+}
+
+window.openCommentPopup = function (id) {
+    const item = inventory.find(i => i.id === id);
+    if (!item) return;
+
+    activeCommentItemId = id;
+    document.getElementById('commentName').value = "";
+    document.getElementById('commentText').value = "";
+    document.getElementById('commentModal').classList.add('open');
+    document.getElementById('commentName').focus();
+};
+
+window.closeCommentPopup = function () {
+    activeCommentItemId = null;
+    document.getElementById('commentName').value = "";
+    document.getElementById('commentText').value = "";
+    document.getElementById('commentModal').classList.remove('open');
+};
+
+window.saveCommentPopup = async function () {
+    if (!activeCommentItemId) return;
+
+    const item = inventory.find(i => i.id === activeCommentItemId);
+    if (!item) return;
+
+    const name = document.getElementById('commentName').value.trim();
+    const text = document.getElementById('commentText').value.trim();
+    if (!name && !text) return;
+
+    await updateDoc(doc(db, "inventory", activeCommentItemId), {
+        comments: [
+            ...getItemComments(item),
+            {
+                name,
+                text,
+                createdAt: new Date().toISOString()
+            }
+        ],
+        commentName: "",
+        comment: ""
+    });
+
+    closeCommentPopup();
+};
+
+window.removeComment = async function (id, index) {
+    const item = inventory.find(i => i.id === id);
+    if (!item) return;
+
+    const comments = getItemComments(item).filter((_, commentIndex) => commentIndex !== index);
+
+    await updateDoc(doc(db, "inventory", id), {
+        comments,
+        commentName: "",
+        comment: ""
+    });
+};
+
+document.getElementById('commentModal').addEventListener('click', (event) => {
+    if (event.target.id === 'commentModal') {
+        closeCommentPopup();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        closeCommentPopup();
+    }
+});
+
 window.renderTable = function () {
     const table = document.getElementById('inventoryTable');
     const search = document.getElementById('search').value.toLowerCase();
@@ -241,26 +471,50 @@ window.renderTable = function () {
     table.innerHTML = '';
 
     inventory
-    .filter(i =>
-        (i.name || "").toLowerCase().includes(search) ||
-        (i.category || "").toLowerCase().includes(search)
-    )
+    .filter(i => {
+        const commentSearch = getItemComments(i)
+            .map(comment => `${comment.name || ""} ${comment.text || ""}`)
+            .join(" ")
+            .toLowerCase();
+
+        return (i.name || "").toLowerCase().includes(search) ||
+            (i.category || "").toLowerCase().includes(search) ||
+            commentSearch.includes(search);
+    })
     .forEach(item => {
+        const qty = Number.isFinite(Number(item.qty)) ? Number(item.qty) : 0;
+        const comments = getItemComments(item);
+        const commentHtml = comments.length
+            ? `<div class="comments-list">
+                    ${comments.map((comment, index) => `
+                        <div class="saved-comment">
+                            <div class="comment-header">
+                                <span class="comment-author">${escapeHtml(comment.name || "Uden navn")}</span>
+                                <button class="remove-comment" onclick="removeComment('${item.id}', ${index})">Fjern</button>
+                            </div>
+                            <p class="comment-text">${escapeHtml(comment.text || "")}</p>
+                        </div>
+                    `).join("")}
+                </div>`
+            : "";
+
         table.innerHTML += `
             <tr>
-                <td>
-                    <span contenteditable="true" onblur="saveName('${item.id}', this.innerText)">${item.name}</span>
+                <td class="item-cell">
+                    <span contenteditable="true" onblur="saveName('${item.id}', this.innerText)">${escapeHtml(item.name)}</span>
+                    ${commentHtml}
                 </td>
                 <td>
-                    <span contenteditable="true" onblur="saveCategory('${item.id}', this.innerText)">${item.category}</span>
+                    <span contenteditable="true" onblur="saveCategory('${item.id}', this.innerText)">${escapeHtml(item.category)}</span>
                 </td>
                 <td>
-                <span id="qty-${item.id}">${item.qty}</span>
-                <button class="edit-btn" onclick="startEditQty('${item.id}',${item.qty})">✏️</button>
+                <span id="qty-${item.id}">${qty}</span>
+                <button class="edit-btn" onclick="startEditQty('${item.id}', ${qty})">&#9999;&#65039;</button>
                 </td>
-                <td>
-                    <button class="plus" onclick='changeQty(${JSON.stringify(item)}, 1)'>+</button>
-                    <button class="minus" onclick='changeQty(${JSON.stringify(item)}, -1)'>-</button>
+                <td class="actions-cell">
+                    <button class="plus" onclick="changeQty('${item.id}', ${qty}, 1)">+</button>
+                    <button class="minus" onclick="changeQty('${item.id}', ${qty}, -1)">-</button>
+                    <button class="comment-btn" onclick="openCommentPopup('${item.id}')">Kommentar</button>
                     <button class="delete" onclick="deleteItem('${item.id}')">Slet</button>
                 </td>
             </tr>
@@ -272,7 +526,10 @@ window.exportExcel = function () {
     const data = inventory.map(i => ({
         Ting: i.name,
         Lokation: i.category,
-        Antal: i.qty
+        Antal: i.qty,
+        Kommentarer: getItemComments(i)
+            .map(comment => `${comment.name || "Uden navn"}: ${comment.text || ""}`)
+            .join("\n")
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -291,7 +548,7 @@ window.exportExcel = function () {
             value="${currentQty}"
             min="0"
             onblur="saveQty('${id}')"
-            onkeydown="if(event.key==='Enter') saveQty('${id}')"
+            onkeydown="if(event.key==='Enter') { event.preventDefault(); this.blur(); }"
             style="width:70px;border-radius:10px;padding:6px;"
         >
     `;
@@ -300,7 +557,10 @@ window.exportExcel = function () {
 };
 
 window.saveQty = async function(id) {
-    const value = parseInt(document.getElementById(`qtyInput-${id}`).value);
+    const input = document.getElementById(`qtyInput-${id}`);
+    if (!input) return;
+
+    const value = parseInt(input.value);
 
     await updateDoc(doc(db, "inventory", id), {
         qty: isNaN(value) ? 0 : value
@@ -310,3 +570,4 @@ window.saveQty = async function(id) {
 
 </body>
 </html>
+
