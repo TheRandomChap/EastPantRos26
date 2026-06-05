@@ -320,9 +320,15 @@
         <thead>
             <tr>
                 <th>Antal</th>
-                <th>Ting</th>
-                <th>Lokation</th>
-                <th>Kassenummer</th>
+                <th style="cursor:pointer;" onclick="toggleSort('name')">
+                    Ting <span class="sort-icon" data-sort-field="name">↕</span>
+                </th>
+                <th style="cursor:pointer;" onclick="toggleSort('category')">
+                    Lokation <span class="sort-icon" data-sort-field="category">↕</span>
+                </th>
+                <th style="cursor:pointer;" onclick="toggleSort('boxNumber')">
+                    Kassenummer <span class="sort-icon" data-sort-field="boxNumber">↕</span>
+                </th>
                 <th>Handlinger</th>
             </tr>
         </thead>
@@ -387,6 +393,8 @@ const colRef = collection(db, "inventory");
 let inventory = [];
 let activeCommentItemId = null;
 let pendingRemoveComment = null;
+let sortField = null;
+let sortDirection = 'asc';
 
 /* Lytter live på Firestore. Når databasen ændrer sig, opdateres inventory og tabellen tegnes igen. */
 onSnapshot(colRef, (snapshot) => {
@@ -418,6 +426,26 @@ window.addItem = async function () {
     document.getElementById('itemQty').value = '';
     document.getElementById('itemCategory').value = '';
     document.getElementById('itemBoxNumber').value = '';
+};
+
+window.toggleSort = function (field) {
+    if (sortField === field) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortField = field;
+        sortDirection = 'asc';
+    }
+
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+        const fieldName = icon.getAttribute('data-sort-field');
+        if (fieldName === sortField) {
+            icon.textContent = sortDirection === 'asc' ? '⬆' : '⬇';
+        } else {
+            icon.textContent = '↕';
+        }
+    });
+
+    renderTable();
 };
 
 /* Sletter en hel ting fra Firestore ud fra dens dokument-id. */
@@ -601,6 +629,27 @@ window.renderTable = function () {
             (i.category || "").toLowerCase().includes(search) ||
             (i.boxNumber || "").toLowerCase().includes(search) ||
             commentSearch.includes(search);
+    })
+    /* Sorterer efter kategori hvis sorteringsfunktionen er aktiv. */
+    .sort((a, b) => {
+        if (!sortField) return 0;
+
+        let valueA;
+        let valueB;
+
+        if (sortField === 'qty') {
+            valueA = Number(a.qty) || 0;
+            valueB = Number(b.qty) || 0;
+        } else {
+            valueA = (a[sortField] || "").toString().toLowerCase();
+            valueB = (b[sortField] || "").toString().toLowerCase();
+        }
+
+        if (valueA === valueB) return 0;
+        if (sortDirection === 'asc') {
+            return valueA < valueB ? -1 : 1;
+        }
+        return valueA > valueB ? -1 : 1;
     })
     /* Opretter en tabelrække for hver ting der matcher søgningen. */
     .forEach(item => {
