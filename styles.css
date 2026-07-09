@@ -1,0 +1,285 @@
+/* Grundlayout for hele siden: skrifttype, nulstilling af standardafstand og baggrund. */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #eef2f7, #dfe9f3);
+}
+
+/* Hovedboksen omkring hele inventar-appen. */
+.container {
+    max-width: 950px;
+    margin: 40px auto;
+    background: rgba(255,255,255,0.9);
+    padding: 25px;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+/* Sidens overskrift. */
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 32px;
+    color: #222;
+}
+
+/* Fælles styling for tekstfelter og knapper. */
+input, button {
+    padding: 12px 14px;
+    margin: 6px;
+    border-radius: 14px;
+    border: 1px solid #ddd;
+    outline: none;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+/* Vis tydeligt hvilket inputfelt brugeren skriver i. */
+input:focus {
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.2);
+}
+
+/* Gør alle knapper klikbare og lidt kraftigere i teksten. */
+button {
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+}
+
+/* Området med inputfelter og hovedknapper øverst. */
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Tabellen som viser alle tingene fra databasen. */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 20px;
+    overflow: hidden;
+    border-radius: 18px;
+}
+
+/* Fælles celle-styling for tabeloverskrifter og tabelindhold. */
+th, td {
+    padding: 14px;
+    text-align: left;
+    vertical-align: top;
+}
+
+/* Den lilla overskriftsrække i tabellen. */
+th {
+    background: #6c63ff;
+    color: white;
+    font-weight: 600;
+}
+
+/* Standardbaggrund for tabelrækker. */
+tr {
+    background: white;
+}
+
+/* Giver hver anden række en svag anden farve, så tabellen er nemmere at læse. */
+tr:nth-child(even) {
+    background: #f7f7ff;
+}
+
+/* Fremhæv den række musen er over. */
+tr:hover {
+    background: #eef0ff;
+}
+
+/* Tynd linje under hver tabelcelle. */
+td {
+    border-bottom: 1px solid #eee;
+}
+
+/* Rød slet-knap. */
+.delete {
+    background: #ff4d4d;
+    color: white;
+    border-radius: 12px;
+}
+
+/* Grøn plus-knap til at lægge 1 til antal. */
+.plus {
+    background: #2ecc71;
+    color: white;
+    border-radius: 12px;
+}
+
+/* Orange minus-knap til at trække 1 fra antal. */
+.minus {
+    background: #f39c12;
+    color: white;
+    border-radius: 12px;
+}
+
+/* Mørk knap til Excel-eksport. */
+.export {
+    background: #333;
+    color: white;
+    border-radius: 14px;
+}
+
+/* Lilla knap til at tilføje en ny ting. */
+.add-btn {
+    background: #6c63ff;
+    color: white;
+    border-radius: 14px;
+}
+
+/* Lille redigeringsknap ved antal. */
+.edit-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 6px;
+}
+
+/* Giver kolonnen med ting/navn mere plads. */
+.item-cell {
+    width: 42%;
+    min-width: 240px;
+}
+
+/* Sørger for at handlingsknapperne har plads nok. */
+.actions-cell {
+    min-width: 230px;
+}
+
+/* Blå knap der åbner kommentar-popup'en. */
+.comment-btn {
+    background: #3498db;
+    color: white;
+    border-radius: 12px;
+}
+
+/* Listevisning af gemte kommentarer under en ting. */
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    max-width: 360px;
+}
+
+/* En enkelt gemt kommentar. */
+.saved-comment {
+    padding: 10px 12px;
+    background: #f0f7ff;
+    border: 1px solid #cfe8ff;
+    border-radius: 10px;
+    color: #2d3748;
+    font-size: 13px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* Selve kommentarteksten. */
+.comment-text {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+/* Lille rød knap til at fjerne en enkelt kommentar. */
+.remove-comment {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: #ff4d4d;
+    color: white;
+    font-size: 12px;
+}
+
+/* Mørkt lag bag popup-vinduerne. Skjult som standard. */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 10;
+}
+
+/* Når popup'en får class "open", bliver den vist. */
+.modal-overlay.open {
+    display: flex;
+}
+
+/* Selve den hvide popup-boks. */
+.comment-modal {
+    width: min(420px, 100%);
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.22);
+    padding: 20px;
+}
+
+/* Overskrift inde i popup-vinduer. */
+.comment-modal h2 {
+    margin: 0 0 12px;
+    color: #222;
+    font-size: 22px;
+}
+
+/* Inputfelter i popup'en fylder hele bredden. */
+.comment-modal input,
+.comment-modal textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 8px 0;
+}
+
+/* Tekstfeltet til kommentarer. */
+.comment-modal textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: Arial, sans-serif;
+}
+
+/* Knaprækken nederst i popup'en. */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* Grå annuller-knap. */
+.cancel-btn {
+    background: #e9ecf2;
+    color: #333;
+}
+
+/* Lilla gem-knap. */
+.save-btn {
+    background: #6c63ff;
+    color: white;
+}
+
+/* Rød advarselsknap til farlige handlinger som fjern/slet. */
+.danger-btn {
+    background: #ff4d4d;
+    color: white;
+}
+
+/* Teksten i bekræftelses-popup'en. */
+.confirm-text {
+    margin: 0 0 14px;
+    color: #333;
+    line-height: 1.45;
+}
